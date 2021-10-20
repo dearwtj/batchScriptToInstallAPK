@@ -1,0 +1,69 @@
+::仅支持同时连接一台设备
+
+::关闭回显
+@echo off
+:: 窗体标题
+title 安装apk
+:start
+:: echo= 输出空白行
+echo=
+:: 命令结果对变量赋值
+for /f %%i in ('adb devices') do set dev=%%i
+:: 判断是否连接设备，注意字符串的比较
+if "%dev%" == "List" (
+	echo=
+	echo 未检测到设备，请确认设备连接情况
+	:: 跳转指令，无设备则跳过选择安装包流程
+	goto stop
+) else echo 当前连接的设备：
+:: 打印设备厂商名
+adb -d shell getprop ro.product.brand
+echo=
+echo ================ 进入安装流程 ==============
+echo   选      选         
+echo     择  择            
+echo       安               
+echo     装  装               
+echo   包      包                                                  
+:: /b 对dir结果过滤，仅显示文件名
+dir /b *.apk
+:: 交互方式对变量赋值
+set var=
+set /p var=输入报名：
+:: 如果未安装，不用选择安装方式，直接安装
+:: 不设置installed=，第二次循环进来会有第一次的值
+if "%var%" == "" (
+	echo=
+	echo 未设置包名
+	goto stop
+) else (
+	for /f %%k in ('dir /b *.apk') do if "%var%" == "%%k" (
+	goto beginInstall)
+)
+echo=
+echo 输入的包名不存在
+goto stop
+::走到这里说明用户输入没问题
+:beginInstall
+set installed=
+for /f %%j in ('adb shell pm list packages ^| findstr cn.calm.ease') do set installed=%%j
+::echo %installed%
+if "%installed%" == "" (goto installing) else echo=
+
+echo 安装方式
+echo     数字2：先卸载再安装 ，其他任意键：直接安装
+echo=
+set /p install_mode=键盘输入：
+echo=
+if %install_mode% equ 2 (adb uninstall cn.calm.ease > nul) else echo 1 > nul
+:installing
+echo +++++++++++ Installing +++++++++++
+:: 卸载apk，不用显示执行结果
+::
+:: adb install normalRd_release_90_1.2.3_93efd23_202108101508.apk
+:: 安装apk
+adb install %var%
+:stop
+pause
+:: 跳转指令，重新检测设备并进行安装流程
+goto start
